@@ -1,0 +1,44 @@
+#!/usr/bin/env ruby
+require 'Nokogiri'
+
+@lat=[]
+@lng=[]
+puts "::reogeo::\nloading:"
+Dir["./kml/*.kml"].each{ |file_name|
+  puts "\t#{file_name}"
+  File.open(file_name){|f|
+    @doc = Nokogiri::XML(f)
+  }
+  xyzList = @doc.xpath("//xmlns:coordinates").first.text
+  #take out spaces and commas - flatten the array
+  flatList = xyzList.split.map{|e| e.split(",")}.flatten
+  #pick out every third element starting at 0
+  @lng += flatList.each_with_index.map{|e,i| if i%3==0 then e end}.compact
+  #pick out every third emlement starting at 1 (think about it +2 is correct).
+  @lat += flatList.each_with_index.map{|e,i| if (i+2)%3==0 then e end}.compact
+}
+
+builder = Nokogiri::XML::Builder.new(:encoding=>'UTF-8') do |xml|
+  xml.resources {
+    xml.send("string-array", :name=>"lat") {
+      @lat.each do |e|
+	xml.item e
+      end
+    }
+    xml.send("string-array", :name=>"lng") {
+      @lng.each do |e|
+	xml.item e
+      end
+    } 
+    xml.send("string-array", :name=>"acc") {
+      @lng.each do |e|
+	# should give 1% variation around 3m
+	xml.item (3*((rand()-0.5)/50).round(4)+3)
+      end
+    }
+  }
+end
+puts "overwrite\n\t./res/values/geo_arrays.xml"
+File.open("./res/values/geo_arrays.xml","w") { |f|
+  f.write(builder.to_xml)
+}

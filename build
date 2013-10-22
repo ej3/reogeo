@@ -1,0 +1,3 @@
+#!/bin/bash
+gem build reogeo.gemspec
+sudo gem install ./reogeo-0.0.0.gem
